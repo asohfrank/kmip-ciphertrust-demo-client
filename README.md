@@ -1,6 +1,6 @@
 # KMIP Client for Basic Key Management and File Encryption
 
-This KMIP client based on pykmip enables a simple demo where, an AES-256 key is securely created via a KMIP server (CipherTrust Manager) and used for test file encryption/decryption.
+This KMIP client based on pykmip enables a simple demo where, an AES-256 key is securely created via a KMIP server (CipherTrust Manager) and used to test file encryption/decryption.
 
 ## Features
 
@@ -67,7 +67,7 @@ password = <use only if ssl mode is set to : TLS, verify client cert, password i
 
 Run the script:
 ```
-python kmip_client.py
+python KMIPclient.py
 ```
 
 **Follow the on-screen menu to:**
