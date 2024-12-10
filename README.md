@@ -57,7 +57,8 @@ cert_reqs = CERT_REQUIRED
 ssl_version = PROTOCOL_TLSv1_2
 do_handshake_on_connect = True
 suppress_ragged_eofs = True
-Key_UID = <UID of the key to manage, if the key UID does not exist on CipherTrust Manager, a new key will be automatically created and this file will be updated with new UID>
+key_name = PythonAESKMIPKey <This is the name of the existing key (or key to be created) on CipherTrust Manager>
+key_uid = <UID of the key to manage, if the key UID does not exist on CipherTrust Manager, a new key will be automatically created and this file will be updated with new UID>
 username = <use only if ssl mode is set to : TLS, verify client cert, password is needed, user name in cert must match user name in authentication request>
 password = <use only if ssl mode is set to : TLS, verify client cert, password is needed, user name in cert must match user name in authentication request>
 ```

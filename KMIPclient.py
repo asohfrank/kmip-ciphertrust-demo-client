@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives import padding
 import warnings
 import time
 from datetime import datetime
+from kmip.core.factories import attributes
 
 # Suppress warning about 32-bit Python
 warnings.filterwarnings("ignore", category=UserWarning, module='cryptography')
@@ -18,6 +19,7 @@ CONFIG_FILE = os.path.expanduser("conf/pykmip.conf")
 DATA_FILE = os.path.expanduser("data/confidential.txt")
 
 # Globals
+gconfig = None
 cached_key = None
 kmip_client = None
 
@@ -34,6 +36,7 @@ def load_config():
         "ssl_version": config.get("client", "ssl_version"),
         "do_handshake_on_connect": config.getboolean("client", "do_handshake_on_connect"),
         "suppress_ragged_eofs": config.getboolean("client", "suppress_ragged_eofs"),
+        "key_name": config.get("client", "key_name"),  # Load Key_Name from config
         "key_uid": config.get("client", "Key_UID"),  # Load Key_UID from config
     }
     return client_config
@@ -41,14 +44,31 @@ def load_config():
 
 def init_kmip_client():
     global kmip_client
-    config = load_config()
+    global gconfig 
+    gconfig = load_config()
     kmip_client = client.ProxyKmipClient(config_file=CONFIG_FILE)
     kmip_client.open()
 
+def get_keyUID_ByName():
+    f = attributes.AttributeFactory()
+    keyuid = kmip_client.locate(
+        attributes=[
+            f.create_attribute(
+                enums.AttributeType.NAME,   
+                gconfig["key_name"]                     
+            )
+        ]
+    )
+    if keyuid:
+        return keyuid[0]
+    else:
+        return None
 
-def ensure_key_exists():
+def KeyExists():
     global cached_key
-    key_uid = load_config()["key_uid"]
+    global gconfig
+    key_uid = gconfig["key_uid"]
+    key_name = gconfig["key_name"]
 
     # Attempt to fetch the key using the UID
     try:
@@ -56,17 +76,34 @@ def ensure_key_exists():
         key = kmip_client.get(key_uid)
         cached_key = key.value  # Cache the key bytes
         print(f"\nKey with UID {key_uid} fetched and cached successfully.\n")
+        return True
     except Exception as e:
         if "ITEM_NOT_FOUND" in str(e):
-            print(f"\nKey with UID {key_uid} not found. Creating a new key.")
-            create_key()  # Create a new key if it doesn't exist
-            activate_key()  # Activate key
+            print(f"\nKey with UID {key_uid} not found. Attempting to fetch by name {key_name}.\n")
+            searchedkeyUID = get_keyUID_ByName()
+            if searchedkeyUID:
+                key = kmip_client.get(searchedkeyUID)
+                cached_key = key.value
+                # Update the Key_UID in the configuration file
+                config = configparser.ConfigParser()
+                config.read(CONFIG_FILE)
+                config.set("client", "Key_UID", searchedkeyUID)
+                with open(CONFIG_FILE, "w") as configfile:
+                        config.write(configfile)
+                        print(f"\nKey_UID {searchedkeyUID} updated in configuration file.\n")
+                #reload config
+                
+                gconfig = load_config()
+                return True  
+            else: 
+                print(f"Key does not exist with UID {key_uid}")
+                return False       
         else:
-            print(f"Error fetching key with UID {key_uid}: {e}")
-            raise e
+            print(f"Key does not exist with UID {key_uid}: {e}")
+            return False
 
 def activate_key():
-    key_uid = load_config()["key_uid"]
+    key_uid = gconfig["key_uid"]
     try:
         print(f"\nActivating key: {key_uid} from Pre-Active - Active State")
         kmip_client.activate(key_uid)
@@ -76,7 +113,10 @@ def activate_key():
 
 def create_key():
     global cached_key
-    key_name = "PythonAESKMIPKey"  # Hardcoded name for the key
+    global gconfig
+    key_name = gconfig["key_name"]
+    if not key_name:
+        key_name = "PythonAESKMIPKey"  # Hardcoded name for the key
     try:
         key_uid = kmip_client.create(
             enums.CryptographicAlgorithm.AES,
@@ -98,12 +138,16 @@ def create_key():
         config.set("client", "Key_UID", key_uid)
         with open(CONFIG_FILE, "w") as configfile:
             config.write(configfile)
+        #reload config
+        
+        gconfig = load_config()
         print(f"\nKey_UID {key_uid} saved to configuration file.")
+
+        activate_key()  # Activate key   
+        
     except Exception as e:
         print(f"Error creating key: {e}")
-        if "already exists" in str(e):
-            print("\nKey already exists, attempting to fetch it instead.")
-            ensure_key_exists()  # Try to fetch the key if creation fails
+        raise e
 
 
 def encrypt_file():
@@ -158,7 +202,7 @@ def decrypt_file():
         print("\t\tDecrypted Content")
         print("********************************************************\n")
         print(plaintext.decode())
-    except ValueError as e:
+    except Exception as e:
         if "Invalid padding bytes" in str(e):
             print("\nError: The file is either corrupted or it was encrypted with a key that no longer exists on CipherTrust Manager.\n")
         else:
@@ -171,7 +215,7 @@ def clear_key_cache():
 
 
 def manage_key(action):
-    key_uid = load_config()["key_uid"]
+    key_uid = gconfig["key_uid"]
     
     if action == "1":  # Revoke Key
         # Prompt for revocation reason
@@ -234,19 +278,22 @@ def menu():
             clear_key_cache()
         elif choice == "2":
             if cached_key is None:
-                ensure_key_exists()
-            print("\n********************************************************")
-            print("\t\tEncrypted content from file")
-            print("********************************************************\n")
-            with open(DATA_FILE, 'rb') as file:
-                print(base64.b64encode(file.read()).decode())
-            decrypt_file()
+                if KeyExists():
+                    print("\n********************************************************")
+                    print("\t\tEncrypted content from file")
+                    print("********************************************************\n")
+                    with open(DATA_FILE, 'rb') as file:
+                        print(base64.b64encode(file.read()).decode())
+                    decrypt_file()
+                else:
+                    print("\n Unable to decrypt file")
+                    break
         elif choice == "3":
             if cached_key is None:
-                ensure_key_exists()
+                KeyExists()
             print("\n--- Manage Key ---")
             print("1. Revoke Key")
-            print("2. Destroy Key")
+            print("2. Destroy Key (must revoke before destroy)")
             action = input("\nSelect action (1-2): ")
             if action in ["1", "2"]:
                 manage_key(action)
@@ -263,7 +310,8 @@ def menu():
 if __name__ == "__main__":
     try:
         init_kmip_client()
-        ensure_key_exists()  # Check if the key exists or create it
+        if not KeyExists():
+             create_key()
         encrypt_file()  # Encrypt the file if necessary
         menu()
     except Exception as e:
