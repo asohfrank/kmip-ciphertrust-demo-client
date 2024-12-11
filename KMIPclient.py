@@ -96,7 +96,7 @@ def KeyExists():
                 gconfig = load_config()
                 return True  
             else: 
-                print(f"Key does not exist with UID {key_uid}")
+                print(f"Key does not exist")
                 return False       
         else:
             print(f"Key does not exist with UID {key_uid}: {e}")
@@ -277,17 +277,16 @@ def menu():
         if choice == "1":
             clear_key_cache()
         elif choice == "2":
-            if cached_key is None:
-                if KeyExists():
-                    print("\n********************************************************")
-                    print("\t\tEncrypted content from file")
-                    print("********************************************************\n")
-                    with open(DATA_FILE, 'rb') as file:
-                        print(base64.b64encode(file.read()).decode())
-                    decrypt_file()
-                else:
-                    print("\n Unable to decrypt file")
-                    break
+            if cached_key is None and not KeyExists():
+                print("\nUnable to decrypt file")
+                break
+
+            print("\n********************************************************")
+            print("\t\tEncrypted content from file")
+            print("********************************************************\n")
+            with open(DATA_FILE, 'rb') as file:
+                print(base64.b64encode(file.read()).decode())
+            decrypt_file()
         elif choice == "3":
             if cached_key is None:
                 KeyExists()
