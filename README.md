@@ -1,6 +1,7 @@
 # KMIP Client for Basic Key Management and File Encryption
 
 This KMIP client based on pykmip enables a simple demo where, an AES-256 key is securely created via a KMIP server (CipherTrust Manager) and used to test file encryption/decryption.
+On every startup, the program automatically creates key if not exist and encrypts file if not encrypted.
 
 ## Features
 
@@ -74,7 +75,8 @@ python KMIPclient.py
 **Follow the on-screen menu to:**
 
 - Clear Key Cache
-- Read & Decrypt File
+- Read & Decrypt file in memory
+- Decrypt File (Write as plaintext)
 - Manage Key (revoke/destroy)
 - Close Connection and Exit
   

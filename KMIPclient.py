@@ -178,8 +178,40 @@ def encrypt_file():
 
     print(f"File {DATA_FILE} encrypted.")
 
+def decrypt_and_save_file():
+    try:
+        with open(DATA_FILE, "rb") as f:
+            file_content = f.read()
 
-def decrypt_file():
+        if not file_content.startswith(b"ENCRYPTED"):
+            print("The file is not encrypted or has already been decrypted.")
+            return
+
+        iv = file_content[9:25]
+        ciphertext = file_content[25:]
+
+        cipher = Cipher(algorithms.AES(cached_key), modes.CBC(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+
+        decrypted_data = decryptor.update(ciphertext) + decryptor.finalize()
+
+        unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
+        plaintext = unpadder.update(decrypted_data) + unpadder.finalize()
+
+        # Save the plaintext content to a new file
+        output_file = DATA_FILE.replace("confidential.txt", "confidential.txt")
+        with open(output_file, "wb") as f:
+            f.write(plaintext)
+
+        print(f"\nFile has been decrypted and saved as: {output_file}")
+
+    except Exception as e:
+        if "Invalid padding bytes" in str(e):
+            print("\nError: The file is either corrupted or it was encrypted with a key that no longer exists on CipherTrust Manager.\n")
+        else:
+            print(f"Error during decryption: {e}")
+
+def decrypt_file_in_memory():
     try:
         with open(DATA_FILE, "rb") as f:
             file_content = f.read()
@@ -269,9 +301,10 @@ def menu():
     while True:
         print("\n------------ KMIP Client Menu ------------")
         print("1. Clear Key Cache")
-        print("2. Read & Decrypt File")
-        print("3. Manage Key (revoke/destroy)")
-        print("4. Close Connection and Exit")
+        print("2. Read & Decrypt file in memory")
+        print("3. Decrypt File (Write as Plaintext)")
+        print("4. Manage Key (revoke/destroy)")
+        print("5. Close Connection and Exit")
         choice = input("\nEnter your choice: ")
 
         if choice == "1":
@@ -286,8 +319,15 @@ def menu():
             print("********************************************************\n")
             with open(DATA_FILE, 'rb') as file:
                 print(base64.b64encode(file.read()).decode())
-            decrypt_file()
-        elif choice == "3":
+            decrypt_file_in_memory()
+
+        elif choice == "3":  # Trigger the new decryption functionality
+            if cached_key is None and not KeyExists():
+                print("\nUnable to decrypt file")
+                break
+            decrypt_and_save_file()
+
+        elif choice == "4":
             if cached_key is None:
                 KeyExists()
             print("\n--- Manage Key ---")
@@ -298,7 +338,7 @@ def menu():
                 manage_key(action)
             else:
                 print("\nInvalid selection!")
-        elif choice == "4":
+        elif choice == "5":
             clear_key_cache()
             kmip_client.close()
             print("\nConnection closed. Exiting.")
