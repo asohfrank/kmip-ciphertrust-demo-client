@@ -95,7 +95,7 @@ If a file decryption fails due to invalid padding, the program informs the user 
 │   └── pykmip.conf         # Configuration file for KMIP client
 ├── data/
 │   └── confidential.txt    # File for testing encryption and decryption
-├── kmip_client.py          # Main script
+├── KMIPclient.py           # Main script
 ├── README.md               # Project documentation
 ```
 
