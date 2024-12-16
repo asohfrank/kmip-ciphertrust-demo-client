@@ -45,7 +45,8 @@ pip install pykmip cryptography configparser
 1. Create a CipherTrust KMIP interface with the approriate SSL configuration (default mode is : TLS, verify client cert, user name taken from client cert, auth request is optional)
 2. Create a client certificate keypair (the CN if the certificate should match the username of CipherTrust Manager you want to authenticate to)
 3. Download the CipherTrust CA cert
-4. Create a conf/pykmip.conf file with the following structure:
+4. Place the certificates in the cert folder respective directories (client/server)
+5. Create a conf/pykmip.conf file with the following structure:
 
 ```
 [client]
@@ -63,7 +64,7 @@ key_uid = <UID of the key to manage, if the key UID does not exist on CipherTrus
 username = <use only if ssl mode is set to : TLS, verify client cert, password is needed, user name in cert must match user name in authentication request>
 password = <use only if ssl mode is set to : TLS, verify client cert, password is needed, user name in cert must match user name in authentication request>
 ```
-2. Create a data/confidential.txt file for testing encryption and decryption (dummy data in file).
+6. Create a data/confidential.txt file for testing encryption and decryption (dummy data in file).
 
 ### Usage
 
@@ -93,6 +94,12 @@ If a file decryption fails due to invalid padding, the program informs the user 
 ### Directory Structure
 ```
 .
+├── certs/
+│   └── client/         
+│        └── certificatefile
+│        └── keyfile         
+│   └── server/         
+│         └── certificate         
 ├── conf/
 │   └── pykmip.conf         # Configuration file for KMIP client
 ├── data/
