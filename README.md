@@ -30,14 +30,14 @@ On every startup, the program automatically creates key if not exist and encrypt
 
 - Python ***3.7.9*** (later versions have a wrap_socket issue as a result of some changes that our dependent library kmip hasnt be updated to)
 - Required libraries:
-  - `kmip`
+  - `pykmip`
   - `cryptography`
   - `configparser`
 
 Install the required libraries using pip:
 
 ```bash
-pip install kmip cryptography
+pip install pykmip cryptography configparser
 ```
 
 ### Configuration
